@@ -1,6 +1,6 @@
 {
   "name": "grab-bcv",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Parse and normalize Bible passage references (OSIS, natural text, and shared links).",
   "license": "MIT",
   "type": "module",
