@@ -1,0 +1,131 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - "v*"
+    paths:
+      - "src/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/publish.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - run: corepack enable
+
+      - name: Set npm registry
+        run: npm config set registry https://registry.npmjs.org/
+
+      - name: Ensure supported npm CLI for OIDC publish
+        run: |
+          npm install -g npm@^11.5.1
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "require('./package.json').version")"
+          echo "PACKAGE_VERSION=$package_version" >> "$GITHUB_ENV"
+
+          published_version="$(npm view grab-bcv version 2>/dev/null || true)"
+          echo "Published version: ${published_version:-<none>}"
+          echo "Package version: $package_version"
+
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            expected_tag="v$package_version"
+            if [[ "${GITHUB_REF_NAME:-}" != "$expected_tag" ]]; then
+              echo "Tag ${GITHUB_REF_NAME:-<unknown>} does not match package version $package_version." >&2
+              echo "Expected tag: $expected_tag" >&2
+              exit 1
+            fi
+          fi
+
+          should_publish="$(node - <<'EOF' "$package_version" "$published_version"
+          const packageVersion = process.argv[2];
+          const publishedVersion = process.argv[3];
+
+          function parse(version) {
+            if (!version) {
+              return null;
+            }
+
+            const match = version.trim().match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
+            if (!match) {
+              throw new Error(`Unsupported semver value: ${version}`);
+            }
+
+            return match.slice(1, 4).map((part) => Number.parseInt(part, 10));
+          }
+
+          function compare(left, right) {
+            for (let index = 0; index < left.length; index += 1) {
+              if (left[index] > right[index]) {
+                return 1;
+              }
+              if (left[index] < right[index]) {
+                return -1;
+              }
+            }
+            return 0;
+          }
+
+          const next = parse(packageVersion);
+          const current = parse(publishedVersion);
+          if (!current) {
+            process.stdout.write("true");
+            process.exit(0);
+          }
+
+          const result = compare(next, current);
+          if (result < 0) {
+            throw new Error(`package.json version ${packageVersion} is older than npm ${publishedVersion}`);
+          }
+
+          process.stdout.write(result > 0 ? "true" : "false");
+          EOF
+          )"
+
+          echo "SHOULD_PUBLISH=$should_publish" >> "$GITHUB_ENV"
+          if [[ "$should_publish" == "true" ]]; then
+            echo "Publishing grab-bcv@$package_version."
+          else
+            echo "grab-bcv@$package_version is already published; skipping npm publish."
+          fi
+
+      - name: Run release gate
+        if: env.SHOULD_PUBLISH == 'true'
+        run: pnpm run prepack
+
+      - name: Publish to npm
+        if: env.SHOULD_PUBLISH == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset NODE_AUTH_TOKEN
+          npm publish --access public --ignore-scripts

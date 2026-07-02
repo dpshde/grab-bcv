@@ -1,0 +1,86 @@
+{
+  "name": "grab-bcv",
+  "version": "0.1.5",
+  "description": "Parse and normalize Bible passage references (OSIS, natural text, and shared links).",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "build": "tsup src/index.ts src/books.ts src/parse.ts src/find.ts src/autocomplete.ts --format esm,cjs --dts --clean",
+    "check": "tsc --noEmit && vitest run",
+    "deploy:npm": "pnpm run prepack && node scripts/deploy-npm.mjs",
+    "prepack": "tsup src/index.ts src/books.ts src/parse.ts src/find.ts src/autocomplete.ts --format esm,cjs --dts --clean && tsc --noEmit && vitest run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  },
+  "keywords": [
+    "bible",
+    "scripture",
+    "osis",
+    "reference",
+    "parser",
+    "typescript"
+  ],
+  "homepage": "https://github.com/dpshde/grab-bcv#readme",
+  "bugs": {
+    "url": "https://github.com/dpshde/grab-bcv/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dpshde/grab-bcv.git"
+  },
+  "funding": {
+    "type": "ko-fi",
+    "url": "https://ko-fi.com/dpshade"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./books": {
+      "types": "./dist/books.d.ts",
+      "import": "./dist/books.js",
+      "require": "./dist/books.cjs"
+    },
+    "./parse": {
+      "types": "./dist/parse.d.ts",
+      "import": "./dist/parse.js",
+      "require": "./dist/parse.cjs"
+    },
+    "./find": {
+      "types": "./dist/find.d.ts",
+      "import": "./dist/find.js",
+      "require": "./dist/find.cjs"
+    },
+    "./autocomplete": {
+      "types": "./dist/autocomplete.d.ts",
+      "import": "./dist/autocomplete.js",
+      "require": "./dist/autocomplete.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src/para-data.json",
+    "README.md",
+    "LICENSE"
+  ]
+}
