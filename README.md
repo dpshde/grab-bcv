@@ -61,6 +61,10 @@ parseAnyPassage("logosres:bible+niv.61.3.16"); // -> JHN.3.16
 parseAnyPassage("Read John 3:16 and Romans 8:28", { multiple: true }).map((p) => p.canonical);
 // ["JHN.3.16", "ROM.8.28"]
 
+// Same-chapter verse lists keep each verse or range separate
+parseAnyPassage("John 3:16,18-20", { multiple: true }).map((p) => p.canonical);
+// ["JHN.3.16", "JHN.3.18-20"]
+
 // Prefer null over exceptions?
 findAnyPassage("not a passage"); // null
 
@@ -411,7 +415,12 @@ Runs `prepack` first, bumps patch only when local matches npm latest, then publi
 
 ## Notes
 
-- Book aliases use exact matching first, then conservative fuzzy fallback for common misspellings.
+- Book aliases use exact matching first, then conservative fuzzy fallback for common misspellings, including adjacent swapped letters (`Jhon`, `Pslam`, `Duet`).
+- Typo correction preserves numbered-book prefixes, including Roman numerals (`II Kngs` resolves to 2 Kings, not 1 Kings).
 - Ambiguous short aliases return `null` rather than guessing.
+- Fuzzy ties also return `null`: `Jonh` is equally close to `John` and the Jonah alias `jona`. Exact aliases such as `Jon` (Jonah) and `Jud` (Jude) keep their meaning.
+- In free text, chapter-only references require an exact book alias, so `join 3 groups` does not become John 3. Standalone references and chapter:verse references still support typo correction.
+- With `{ multiple: true }`, `parseAnyPassage`, `findAnyPassage`, and `tryParseAnyPassage` support same-chapter verse lists separated by commas or semicolons, including ranges (`John 3:16,18-20`). Results preserve source order and omit duplicate passages. Explicit URL references, such as Bible.com paths and BibleGateway search values, also support these lists; arbitrary hyphenated URL slugs do not.
+- Single-result any-passage and share APIs skip verse lists rather than silently drop verses. Chapter lists (`John 3,5`), cross-chapter continuations (`John 3:16,4:2`), and lists with invalid verses or ranges are not supported. Separate complete references such as `John 3:16, 1 John 4:7` remain supported. `parsePassage` remains a single-contiguous-passage parser; use the multiple-result APIs for verse lists.
 - Input normalization handles full-width punctuation, Unicode dash variants, invisible characters, and flexible whitespace.
 - Paragraph data covers all 66 books and is bundled in the package (zero network calls at runtime).

@@ -120,4 +120,20 @@ describe("autocompletePassage", () => {
     expect(autocompletePassage("phm 2")).toEqual([]);
     expect(autocompletePassage("john 22")).toEqual([]);
   });
+
+  it.each([
+    ["II Kngs", "2 Kings", "2KI"],
+    ["II Tmothy", "2 Timothy", "2TI"],
+    ["I Kigs", "1 Kings", "1KI"],
+    ["III Jhon", "3 John", "3JN"],
+  ])("preserves the explicit ordinal in fuzzy suggestions for %s", (alias, name, book) => {
+    expect(autocompletePassage(`${alias} 1:`, { limit: 1 })).toEqual([
+      {
+        label: `${name} 1:1`,
+        insertText: `${name} 1:1`,
+        canonical: `${book}.1.1`,
+        kind: "verse"
+      }
+    ]);
+  });
 });
